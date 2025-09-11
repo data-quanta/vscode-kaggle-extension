@@ -346,13 +346,16 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "package": "vsce package",
         "lint": "eslint src --ext ts",
         "lint:fix": "eslint src --ext ts --fix",
         "format": "prettier --write src/**/*.ts",
         "format:check": "prettier --check src/**/*.ts",
         "test": "node ./out/test/runTest.js",
         "pretest": "npm run compile && npm run lint",
+        "clean": "rm -rf out *.vsix",
+        "prebuild": "npm run clean && npm run compile && npm run lint && npm test",
+        "build": "vsce package",
+        "release": "npm run prebuild && npm run build",
         "prepare": "husky install"
     },
     "lint-staged": {

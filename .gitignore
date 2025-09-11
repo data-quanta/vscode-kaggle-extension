@@ -2,6 +2,10 @@
 out/
 *.vsix
 
+# Build scripts
+build.sh
+dev-build.sh
+
 # Node.js
 node_modules/
 
