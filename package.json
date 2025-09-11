@@ -1,0 +1,391 @@
+{
+    "name": "vscode-kaggle-run",
+    "displayName": "Kaggle: Sync & Run",
+    "description": "Develop locally, run on Kaggle compute. Push notebooks/scripts, toggle GPU/TPU, fetch outputs.",
+    "version": "1.0.0",
+    "publisher": "DataQuanta",
+    "author": "Amin Vakhshouri",
+    "license": "MIT",
+    "homepage": "https://github.com/data-quanta/vscode-kaggle-extension",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/data-quanta/vscode-kaggle-extension.git"
+    },
+    "bugs": {
+        "url": "https://github.com/data-quanta/vscode-kaggle-extension/issues"
+    },
+    "galleryBanner": {
+        "color": "#20BEFF",
+        "theme": "dark"
+    },
+    "keywords": [
+        "kaggle",
+        "machine learning",
+        "data science",
+        "jupyter",
+        "notebook",
+        "gpu",
+        "datasets"
+    ],
+    "engines": {
+        "vscode": "^1.88.0"
+    },
+    "categories": [
+        "Data Science",
+        "Machine Learning",
+        "Other"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "kaggle.signIn",
+                "title": "Kaggle: Sign In"
+            },
+            {
+                "command": "kaggle.signOut",
+                "title": "Kaggle: Sign Out"
+            },
+            {
+                "command": "kaggle.initProject",
+                "title": "Kaggle: Init Project"
+            },
+            {
+                "command": "kaggle.linkNotebook",
+                "title": "Kaggle: Link to Existing Notebook"
+            },
+            {
+                "command": "kaggle.runCurrentNotebook",
+                "title": "Run on Kaggle",
+                "icon": "$(rocket)"
+            },
+            {
+                "command": "kaggle.pushRun",
+                "title": "Kaggle: Push & Run"
+            },
+            {
+                "command": "kaggle.downloadOutputs",
+                "title": "Kaggle: Download Outputs"
+            },
+            {
+                "command": "kaggle.attachDataset",
+                "title": "Kaggle: Attach Dataset"
+            },
+            {
+                "command": "kaggle.submitCompetition",
+                "title": "Kaggle: Submit to Competition"
+            },
+            {
+                "command": "kaggle.refreshMyNotebooks",
+                "title": "Kaggle: Refresh My Notebooks",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "kaggle.refreshDatasets",
+                "title": "Kaggle: Refresh Datasets",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "kaggle.openOnKaggle",
+                "title": "Kaggle: Open on kaggle.com",
+                "icon": "$(link-external)"
+            },
+            {
+                "command": "kaggle.openNotebookLocally",
+                "title": "Kaggle: Open Notebook Locally",
+                "icon": "$(notebook)",
+                "category": "Kaggle"
+            },
+            {
+                "command": "kaggle.linkNotebookFromTree",
+                "title": "Kaggle: Link Notebook Here",
+                "icon": "$(link)"
+            },
+            {
+                "command": "kaggle.pullNotebookFromTree",
+                "title": "Kaggle: Pull Notebook Metadata",
+                "icon": "$(cloud-download)"
+            },
+            {
+                "command": "kaggle.attachDatasetFromTree",
+                "title": "Kaggle: Attach Dataset",
+                "icon": "$(add)"
+            },
+            {
+                "command": "kaggle.datasetBrowseFiles",
+                "title": "Kaggle: Browse Dataset Files",
+                "icon": "$(file-directory)"
+            },
+            {
+                "command": "kaggle.datasetDownloadAll",
+                "title": "Kaggle: Download Dataset",
+                "icon": "$(cloud-download)"
+            },
+            {
+                "command": "kaggle.openOutputsFolder",
+                "title": "Kaggle: Open Outputs Folder",
+                "icon": "$(folder-opened)"
+            }
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "kaggle",
+                    "title": "Kaggle",
+                    "icon": "./media/kaggle.svg"
+                }
+            ]
+        },
+        "views": {
+            "kaggle": [
+                {
+                    "id": "kaggleRunsView",
+                    "name": "Runs",
+                    "icon": "$(play-circle)"
+                },
+                {
+                    "id": "kaggleMyNotebooksView",
+                    "name": "My Notebooks",
+                    "icon": "$(notebook)"
+                },
+                {
+                    "id": "kaggleDatasetsView",
+                    "name": "Datasets",
+                    "icon": "$(database)"
+                }
+            ]
+        },
+        "menus": {
+            "notebookToolbar": [
+                {
+                    "command": "kaggle.runCurrentNotebook",
+                    "icon": "$(rocket)",
+                    "when": "resourceExtname == .ipynb",
+                    "group": "navigation@1000"
+                }
+            ],
+            "notebook/cell/title": [
+                {
+                    "command": "kaggle.runCurrentNotebook",
+                    "icon": "$(rocket)",
+                    "when": "resourceExtname == .ipynb",
+                    "group": "navigation@1000"
+                }
+            ],
+            "notebook/cell/context": [
+                {
+                    "command": "kaggle.runCurrentNotebook",
+                    "when": "resourceExtname == .ipynb",
+                    "group": "navigation@1000"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "kaggle.openOnKaggle",
+                    "when": "view == kaggleMyNotebooksView && viewItem == kernel",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "kaggle.openNotebookLocally",
+                    "when": "view == kaggleMyNotebooksView && viewItem == kernel",
+                    "group": "inline@0"
+                },
+                {
+                    "command": "kaggle.linkNotebookFromTree",
+                    "when": "view == kaggleMyNotebooksView && viewItem == kernel",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "kaggle.pullNotebookFromTree",
+                    "when": "view == kaggleMyNotebooksView && viewItem == kernel",
+                    "group": "inline@3"
+                },
+                {
+                    "command": "kaggle.openOnKaggle",
+                    "when": "view == kaggleDatasetsView && viewItem == dataset",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "kaggle.attachDatasetFromTree",
+                    "when": "view == kaggleDatasetsView && viewItem == dataset",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "kaggle.datasetBrowseFiles",
+                    "when": "view == kaggleDatasetsView && viewItem == dataset",
+                    "group": "inline@3"
+                },
+                {
+                    "command": "kaggle.datasetDownloadAll",
+                    "when": "view == kaggleDatasetsView && viewItem == dataset",
+                    "group": "inline@4"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "kaggle.runCurrentNotebook",
+                    "icon": "$(rocket)",
+                    "when": "resourceExtname == .ipynb",
+                    "group": "navigation@1001"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "kaggle.refreshMyNotebooks",
+                    "when": "view == kaggleMyNotebooksView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "kaggle.refreshDatasets",
+                    "when": "view == kaggleDatasetsView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "kaggle.openOutputsFolder",
+                    "when": "view == kaggleRunsView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "kaggle.signIn",
+                    "when": "view == kaggleRunsView && !kaggle.isSignedIn",
+                    "group": "2_auth@1"
+                },
+                {
+                    "command": "kaggle.signIn",
+                    "when": "view == kaggleMyNotebooksView && !kaggle.isSignedIn",
+                    "group": "2_auth@1"
+                },
+                {
+                    "command": "kaggle.signIn",
+                    "when": "view == kaggleDatasetsView && !kaggle.isSignedIn",
+                    "group": "2_auth@1"
+                },
+                {
+                    "command": "kaggle.signOut",
+                    "when": "view == kaggleRunsView && kaggle.isSignedIn",
+                    "group": "2_auth@2"
+                },
+                {
+                    "command": "kaggle.signOut",
+                    "when": "view == kaggleMyNotebooksView && kaggle.isSignedIn",
+                    "group": "2_auth@2"
+                },
+                {
+                    "command": "kaggle.signOut",
+                    "when": "view == kaggleDatasetsView && kaggle.isSignedIn",
+                    "group": "2_auth@2"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "kaggleRunsView",
+                "contents": "To get started, sign in to Kaggle. [Sign In](command:kaggle.signIn)",
+                "when": "!kaggle.isSignedIn"
+            },
+            {
+                "view": "kaggleMyNotebooksView",
+                "contents": "Sign in to list your notebooks. [Sign In](command:kaggle.signIn)",
+                "when": "!kaggle.isSignedIn"
+            },
+            {
+                "view": "kaggleDatasetsView",
+                "contents": "Sign in to browse datasets. [Sign In](command:kaggle.signIn)",
+                "when": "!kaggle.isSignedIn"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Kaggle",
+            "properties": {
+                "kaggle.cliPath": {
+                    "type": "string",
+                    "default": "kaggle",
+                    "description": "Path to Kaggle CLI executable."
+                },
+                "kaggle.defaultAccelerator": {
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "gpu",
+                        "tpu"
+                    ],
+                    "default": "none",
+                    "description": "Default accelerator for new projects."
+                },
+                "kaggle.defaultInternet": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable internet by default for new projects."
+                },
+                "kaggle.outputsFolder": {
+                    "type": "string",
+                    "default": ".kaggle-outputs",
+                    "description": "Where to download run outputs."
+                },
+                "kaggle.autoDownloadOnComplete": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically download outputs when a Kaggle run completes."
+                },
+                "kaggle.pollIntervalSeconds": {
+                    "type": "number",
+                    "default": 10,
+                    "description": "How often to poll for run completion."
+                },
+                "kaggle.pollTimeoutSeconds": {
+                    "type": "number",
+                    "default": 600,
+                    "description": "How long to poll for completion before giving up."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "package": "vsce package",
+        "lint": "eslint src --ext ts",
+        "lint:fix": "eslint src --ext ts --fix",
+        "format": "prettier --write src/**/*.ts",
+        "format:check": "prettier --check src/**/*.ts",
+        "test": "node ./out/test/runTest.js",
+        "pretest": "npm run compile && npm run lint",
+        "prepare": "husky install"
+    },
+    "lint-staged": {
+        "src/**/*.ts": [
+            "eslint --fix",
+            "prettier --write"
+        ]
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.35.0",
+        "@types/chai": "^5.2.2",
+        "@types/glob": "^9.0.0",
+        "@types/js-yaml": "^4.0.9",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^20.11.30",
+        "@types/vscode": "^1.88.0",
+        "@typescript-eslint/eslint-plugin": "^8.43.0",
+        "@typescript-eslint/parser": "^8.43.0",
+        "@vscode/test-electron": "^2.5.2",
+        "chai": "^6.0.1",
+        "eslint": "^9.35.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.4",
+        "glob": "^11.0.3",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.6",
+        "mocha": "^11.7.1",
+        "prettier": "^3.6.2",
+        "typescript": "^5.4.5",
+        "typescript-eslint": "^8.43.0",
+        "vsce": "^2.15.0"
+    },
+    "dependencies": {
+        "js-yaml": "^4.1.0"
+    }
+}
