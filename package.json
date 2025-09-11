@@ -35,6 +35,7 @@
         "Machine Learning",
         "Other"
     ],
+    "icon": "media/kaggle-icon.png",
     "activationEvents": [],
     "main": "./out/extension.js",
     "contributes": {
