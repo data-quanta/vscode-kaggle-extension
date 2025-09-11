@@ -1,4 +1,4 @@
-# Kaggle: Sync & Run
+# Kaggle: Studio
 
 Develop locally, run on Kaggle compute. Push notebooks/scripts, choose CPU/GPU/TPU, attach datasets, and auto-download outputs — all from VS Code.
 
