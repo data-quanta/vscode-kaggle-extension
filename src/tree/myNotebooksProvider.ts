@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 import { listMyKernels } from '../kaggleCli';
 
 export interface KernelItem {
-  ref: string;
+  id: string;
+  title: string;
+  author: string;
   url: string;
 }
 
@@ -20,9 +22,10 @@ export class MyNotebooksProvider implements vscode.TreeDataProvider<KernelItem> 
   }
 
   getTreeItem(element: KernelItem): vscode.TreeItem {
-    const item = new vscode.TreeItem(element.ref, vscode.TreeItemCollapsibleState.None);
+    const item = new vscode.TreeItem(element.title, vscode.TreeItemCollapsibleState.None);
     item.contextValue = 'kernel';
-    item.tooltip = element.url;
+    item.tooltip = `${element.title} by ${element.author}\n${element.url}`;
+    item.description = element.author;
     item.iconPath = new vscode.ThemeIcon('notebook');
     item.command = {
       command: 'kaggle.openNotebookLocally',
@@ -39,8 +42,10 @@ export class MyNotebooksProvider implements vscode.TreeDataProvider<KernelItem> 
       // Use the new API function directly
       const kernels = await listMyKernels(this.context);
       return kernels.map(kernel => ({
-        ref: kernel.ref,
-        url: `https://www.kaggle.com/code/${kernel.ref}`,
+        id: kernel.id,
+        title: kernel.title,
+        author: kernel.author,
+        url: kernel.url,
       }));
     } catch (error) {
       console.error('Error loading notebooks:', error);

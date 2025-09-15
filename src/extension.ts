@@ -121,17 +121,17 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand(
       'kaggle.openNotebookLocally',
-      async (item: { ref?: string }) => {
-        if (!item?.ref) return;
+      async (item: { id?: string; title?: string }) => {
+        if (!item?.id) return;
         const root = getWorkspaceFolder();
         if (!root) return vscode.window.showErrorMessage('Open a folder first.');
         try {
           // Pull into remote_notebooks/<user__slug>
           const destRoot = path.join(root, 'remote_notebooks');
-          const safeRef = item.ref.replace(/[\\/]/g, '__');
+          const safeRef = item.id.replace(/[\\/]/g, '__');
           const destDir = path.join(destRoot, safeRef);
           await ensureFolder(destDir);
-          await runKaggleCLI(context, ['kernels', 'pull', '-p', destDir, item.ref], root);
+          await runKaggleCLI(context, ['kernels', 'pull', '-p', destDir, item.id], root);
 
           // Open kernel-metadata.json -> code_file if present, otherwise first ipynb
           const metaPath = path.join(destDir, 'kernel-metadata.json');
