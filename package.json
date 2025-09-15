@@ -36,15 +36,6 @@
         "Other"
     ],
     "icon": "media/kaggle-icon-bright.png",
-    "activationEvents": [
-        "onView:kaggle.myNotebooks",
-        "onView:kaggle.datasets",
-        "onView:kaggle.runs",
-        "onLanguage:python",
-        "onLanguage:jupyter",
-        "workspaceContains:**/kaggle.yml",
-        "workspaceContains:**/kernel-metadata.json"
-    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
