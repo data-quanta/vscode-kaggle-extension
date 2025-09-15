@@ -97,6 +97,63 @@ export async function storeApiTokenFromEnvOrPrompt(context: vscode.ExtensionCont
 
 export type ExecResult = { code: number; stdout: string; stderr: string };
 
+function getInstallInstructions(): string {
+  const platform = process.platform;
+  switch (platform) {
+    case 'win32':
+      return `Install Kaggle CLI:
+• Using pip: pip install kaggle
+• Using conda: conda install -c conda-forge kaggle
+• Make sure Python and pip are installed first`;
+    case 'darwin':
+      return `Install Kaggle CLI:
+• Using pip: pip install kaggle
+• Using conda: conda install -c conda-forge kaggle
+• Using Homebrew: brew install kaggle`;
+    default:
+      return `Install Kaggle CLI:
+• Using pip: pip install kaggle
+• Using conda: conda install -c conda-forge kaggle
+• Make sure Python and pip are installed first`;
+  }
+}
+
+export async function checkKaggleCLI(): Promise<{
+  available: boolean;
+  version?: string;
+  error?: string;
+}> {
+  const config = vscode.workspace.getConfiguration('kaggle');
+  const cliPath = config.get<string>('cliPath', 'kaggle');
+
+  return new Promise(resolve => {
+    exec(`${cliPath} --version`, (error, stdout, stderr) => {
+      if (error) {
+        const errorMsg = error.message.toLowerCase();
+        if (
+          errorMsg.includes('command not found') ||
+          errorMsg.includes('not recognized') ||
+          (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ) {
+          resolve({
+            available: false,
+            error: `Kaggle CLI not found at '${cliPath}'.\n\n${getInstallInstructions()}`,
+          });
+        } else {
+          resolve({
+            available: false,
+            error: `Error checking Kaggle CLI: ${error.message}`,
+          });
+        }
+        return;
+      }
+
+      const version = stdout.trim() || stderr.trim();
+      resolve({ available: true, version });
+    });
+  });
+}
+
 export async function runKaggleCLI(
   context: vscode.ExtensionContext,
   args: string[],
@@ -104,6 +161,29 @@ export async function runKaggleCLI(
 ): Promise<ExecResult> {
   const config = vscode.workspace.getConfiguration('kaggle');
   const cliPath = config.get<string>('cliPath', 'kaggle');
+
+  // Check if CLI is available before running
+  const cliCheck = await checkKaggleCLI();
+  if (!cliCheck.available) {
+    const installAction = 'Install Instructions';
+    const configAction = 'Configure Path';
+    const action = await vscode.window.showErrorMessage(
+      cliCheck.error || 'Kaggle CLI is not available',
+      installAction,
+      configAction
+    );
+
+    if (action === installAction) {
+      vscode.env.openExternal(
+        vscode.Uri.parse('https://github.com/Kaggle/kaggle-api#installation')
+      );
+    } else if (action === configAction) {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'kaggle.cliPath');
+    }
+
+    throw new Error(cliCheck.error || 'Kaggle CLI is not available');
+  }
+
   const creds = await getKaggleCreds(context);
 
   return new Promise((resolve, reject) => {

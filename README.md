@@ -1,10 +1,36 @@
 # Kaggle: Studio
 
-Develop locally, run on Kaggle compute. Push notebooks/scripts, choose CPU/GPU/TPU, attach datasets, and auto-download outputs — all from VS Code.
+Develop locally, run on Kaggle compute. Push notebooks/scripts,## Troubleshooting
 
-## Requirements
-- Kaggle CLI installed: https://github.com/Kaggle/kaggle-api (ensure `kaggle` is on your PATH)
-- A Kaggle API token
+### ❗ CLI Not Found / Command Not Recognized
+If you get errors like "kaggle: command not found" or "kaggle is not recognized":
+
+1. **Install Kaggle CLI**: `pip install kaggle`
+2. **Check installation**: Run **Kaggle: Check CLI Status** command in VS Code
+3. **Configure path**: If installed but not found, set `kaggle.cliPath` in settings to the full path of the kaggle executable
+4. **Restart VS Code** after installation
+
+### Other Issues
+- **"Not found" in My Notebooks**: We fallback to `kaggle kernels list --mine`. Ensure you're signed in.
+- **No outputs**: Ensure the run finished or increase timeouts (`kaggle.pollTimeoutSeconds`).
+- **Authentication**: You can set `KAGGLE_TOKEN_JSON` environment variable or use **Kaggle: Sign In** command. Use **Kaggle: Sign Out** to clear stored tokens.se CPU/GPU/TPU, attach datasets, and auto-download outputs — all from VS Code.
+
+## ⚠️ Prerequisites
+**IMPORTANT**: This extension requires the Kaggle CLI to be installed on your system.
+
+### 1. Install Kaggle CLI
+```bash
+pip install kaggle
+```
+Or visit: https://github.com/Kaggle/kaggle-api#installation
+
+### 2. Verify Installation
+Run `kaggle --version` in your terminal to confirm it's installed, or use the command **Kaggle: Check CLI Status** in VS Code.
+
+### 3. Get a Kaggle API Token
+- Go to your Kaggle account settings
+- Create a new API token (downloads `kaggle.json`)
+- Either set the `KAGGLE_TOKEN_JSON` environment variable or use **Kaggle: Sign In** in VS Code
 
 ## Authentication
 - Preferred: set env var `KAGGLE_TOKEN_JSON` to your kaggle.json content (e.g., `{ "username": "...", "key": "..." }`).
@@ -25,6 +51,7 @@ Develop locally, run on Kaggle compute. Push notebooks/scripts, choose CPU/GPU/T
 - Runs view: shows recent run URLs (from `.kaggle-run.log`)
 
 ## Key commands
+- **Kaggle: Check CLI Status** - Verify if Kaggle CLI is properly installed
 - Kaggle: Sign In / Sign Out
 - Kaggle: Init Project
 - Kaggle: Link to Existing Notebook

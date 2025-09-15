@@ -8,6 +8,7 @@ import {
   getKaggleCreds,
   clearStoredToken,
   storeApiTokenFromEnvOrPrompt,
+  checkKaggleCLI,
 } from './kaggleCli';
 import { initProject } from './scaffold';
 import { RunsProvider } from './tree/runsProvider';
@@ -39,6 +40,29 @@ export async function activate(context: vscode.ExtensionContext) {
   context.secrets.onDidChange(async e => {
     if (e.key === 'kaggle.api.token.json') await updateAuthContext();
   });
+
+  // Check CLI availability on activation
+  setTimeout(async () => {
+    const cliStatus = await checkKaggleCLI();
+    if (!cliStatus.available) {
+      const installAction = 'Install Instructions';
+      const checkAction = 'Check Status';
+      const action = await vscode.window.showWarningMessage(
+        'Kaggle CLI is not available. This extension requires the Kaggle CLI to function properly.',
+        installAction,
+        checkAction,
+        'Dismiss'
+      );
+
+      if (action === installAction) {
+        vscode.env.openExternal(
+          vscode.Uri.parse('https://github.com/Kaggle/kaggle-api#installation')
+        );
+      } else if (action === checkAction) {
+        vscode.commands.executeCommand('kaggle.checkCliStatus');
+      }
+    }
+  }, 1000); // Small delay to avoid blocking extension activation
   const runsProvider = new RunsProvider(context);
   vscode.window.registerTreeDataProvider('kaggleRunsView', runsProvider);
   const getUsername = async () => {
@@ -53,6 +77,29 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.registerTreeDataProvider('kaggleMyNotebooksView', myNotebooksProvider);
   const datasetsProvider = new DatasetsProvider(context, getUsername);
   vscode.window.registerTreeDataProvider('kaggleDatasetsView', datasetsProvider);
+
+  // Create status bar item for CLI status
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  context.subscriptions.push(statusBarItem);
+
+  async function updateCliStatusBar() {
+    const cliStatus = await checkKaggleCLI();
+    if (cliStatus.available) {
+      statusBarItem.text = `$(check) Kaggle CLI`;
+      statusBarItem.tooltip = `Kaggle CLI is available (${cliStatus.version || 'Unknown version'})`;
+      statusBarItem.backgroundColor = undefined;
+      statusBarItem.command = 'kaggle.checkCliStatus';
+    } else {
+      statusBarItem.text = `$(warning) Kaggle CLI`;
+      statusBarItem.tooltip = 'Kaggle CLI is not available. Click to check status.';
+      statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+      statusBarItem.command = 'kaggle.checkCliStatus';
+    }
+    statusBarItem.show();
+  }
+
+  // Update status bar on activation
+  updateCliStatusBar();
 
   context.subscriptions.push(
     vscode.commands.registerCommand('kaggle.signIn', async () => {
@@ -514,6 +561,35 @@ export async function activate(context: vscode.ExtensionContext) {
           root
         );
         vscode.window.showInformationMessage('Submission uploaded.');
+      } catch (e) {
+        showError(e);
+      }
+    }),
+
+    vscode.commands.registerCommand('kaggle.checkCliStatus', async () => {
+      try {
+        const status = await checkKaggleCLI();
+        if (status.available) {
+          vscode.window.showInformationMessage(
+            `Kaggle CLI is available. Version: ${status.version || 'Unknown'}`
+          );
+        } else {
+          const installAction = 'Install Instructions';
+          const configAction = 'Configure Path';
+          const action = await vscode.window.showErrorMessage(
+            status.error || 'Kaggle CLI is not available',
+            installAction,
+            configAction
+          );
+
+          if (action === installAction) {
+            vscode.env.openExternal(
+              vscode.Uri.parse('https://github.com/Kaggle/kaggle-api#installation')
+            );
+          } else if (action === configAction) {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'kaggle.cliPath');
+          }
+        }
       } catch (e) {
         showError(e);
       }
