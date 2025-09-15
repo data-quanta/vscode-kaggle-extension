@@ -1,9 +1,5 @@
 # 🚀 Kaggle Studio - VS Code Extension
 
-[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
-
 **Develop locally, run on Kaggle's compute infrastructure.** Push notebooks and scripts, configure GPU/TPU settings, attach datasets, and download outputs — all integrated into VS Code.
 
 ---
