@@ -28,6 +28,7 @@ interface KaggleYml {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  console.log('Kaggle extension activated!');
   async function updateAuthContext() {
     try {
       await getKaggleCreds(context);
@@ -41,28 +42,19 @@ export async function activate(context: vscode.ExtensionContext) {
     if (e.key === 'kaggle.api.token.json') await updateAuthContext();
   });
 
-  // Check CLI availability on activation
+  // Check CLI availability on activation (non-blocking)
   setTimeout(async () => {
-    const cliStatus = await checkKaggleCLI();
-    if (!cliStatus.available) {
-      const installAction = 'Install Instructions';
-      const checkAction = 'Check Status';
-      const action = await vscode.window.showWarningMessage(
-        'Kaggle CLI is not available. This extension requires the Kaggle CLI to function properly.',
-        installAction,
-        checkAction,
-        'Dismiss'
-      );
-
-      if (action === installAction) {
-        vscode.env.openExternal(
-          vscode.Uri.parse('https://github.com/Kaggle/kaggle-api#installation')
-        );
-      } else if (action === checkAction) {
-        vscode.commands.executeCommand('kaggle.checkCliStatus');
+    try {
+      const cliStatus = await checkKaggleCLI();
+      if (!cliStatus.available) {
+        // Don't show popup immediately, just log it
+        console.log('Kaggle CLI not available:', cliStatus.error);
+        // Only show warning if user tries to use CLI-dependent features
       }
+    } catch (error) {
+      console.log('Error checking CLI status:', error);
     }
-  }, 1000); // Small delay to avoid blocking extension activation
+  }, 2000); // Longer delay to ensure extension is fully activated first
   const runsProvider = new RunsProvider(context);
   vscode.window.registerTreeDataProvider('kaggleRunsView', runsProvider);
   const getUsername = async () => {
