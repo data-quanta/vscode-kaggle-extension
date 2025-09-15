@@ -8,7 +8,7 @@ import {
   getKaggleCreds,
   clearStoredToken,
   storeApiTokenFromEnvOrPrompt,
-  checkKaggleCLI,
+  checkKaggleAPI,
 } from './kaggleCli';
 import { initProject } from './scaffold';
 import { RunsProvider } from './tree/runsProvider';
@@ -42,17 +42,17 @@ export async function activate(context: vscode.ExtensionContext) {
     if (e.key === 'kaggle.api.token.json') await updateAuthContext();
   });
 
-  // Check CLI availability on activation (non-blocking)
+  // Check Kaggle API availability on activation (non-blocking)
   setTimeout(async () => {
     try {
-      const cliStatus = await checkKaggleCLI();
-      if (!cliStatus.available) {
+      const apiStatus = await checkKaggleAPI();
+      if (!apiStatus.available) {
         // Don't show popup immediately, just log it
-        console.log('Kaggle CLI not available:', cliStatus.error);
-        // Only show warning if user tries to use CLI-dependent features
+        console.log('Kaggle API not available:', apiStatus.error);
+        // Only show warning if user tries to use API-dependent features
       }
     } catch (error) {
-      console.log('Error checking CLI status:', error);
+      console.log('Error checking API status:', error);
     }
   }, 2000); // Longer delay to ensure extension is fully activated first
   const runsProvider = new RunsProvider(context);
@@ -70,28 +70,28 @@ export async function activate(context: vscode.ExtensionContext) {
   const datasetsProvider = new DatasetsProvider(context, getUsername);
   vscode.window.registerTreeDataProvider('kaggleDatasetsView', datasetsProvider);
 
-  // Create status bar item for CLI status
+  // Create status bar item for API status
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   context.subscriptions.push(statusBarItem);
 
-  async function updateCliStatusBar() {
-    const cliStatus = await checkKaggleCLI();
-    if (cliStatus.available) {
-      statusBarItem.text = `$(check) Kaggle CLI`;
-      statusBarItem.tooltip = `Kaggle CLI is available (${cliStatus.version || 'Unknown version'})`;
+  async function updateApiStatusBar() {
+    const apiStatus = await checkKaggleAPI();
+    if (apiStatus.available) {
+      statusBarItem.text = `$(check) Kaggle API`;
+      statusBarItem.tooltip = `Kaggle API is available (${apiStatus.version || 'Unknown version'})`;
       statusBarItem.backgroundColor = undefined;
-      statusBarItem.command = 'kaggle.checkCliStatus';
+      statusBarItem.command = 'kaggle.checkApiStatus';
     } else {
-      statusBarItem.text = `$(warning) Kaggle CLI`;
-      statusBarItem.tooltip = 'Kaggle CLI is not available. Click to check status.';
+      statusBarItem.text = `$(warning) Kaggle API`;
+      statusBarItem.tooltip = 'Kaggle API is not available. Click to check status.';
       statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-      statusBarItem.command = 'kaggle.checkCliStatus';
+      statusBarItem.command = 'kaggle.checkApiStatus';
     }
     statusBarItem.show();
   }
 
   // Update status bar on activation
-  updateCliStatusBar();
+  updateApiStatusBar();
 
   context.subscriptions.push(
     vscode.commands.registerCommand('kaggle.signIn', async () => {
@@ -558,28 +558,22 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
 
-    vscode.commands.registerCommand('kaggle.checkCliStatus', async () => {
+    vscode.commands.registerCommand('kaggle.checkApiStatus', async () => {
       try {
-        const status = await checkKaggleCLI();
+        const status = await checkKaggleAPI();
         if (status.available) {
           vscode.window.showInformationMessage(
-            `Kaggle CLI is available. Version: ${status.version || 'Unknown'}`
+            `Kaggle API is available. Version: ${status.version || 'Unknown'}`
           );
         } else {
-          const installAction = 'Install Instructions';
-          const configAction = 'Configure Path';
+          const signInAction = 'Sign In';
           const action = await vscode.window.showErrorMessage(
-            status.error || 'Kaggle CLI is not available',
-            installAction,
-            configAction
+            status.error || 'Kaggle API is not available',
+            signInAction
           );
 
-          if (action === installAction) {
-            vscode.env.openExternal(
-              vscode.Uri.parse('https://github.com/Kaggle/kaggle-api#installation')
-            );
-          } else if (action === configAction) {
-            vscode.commands.executeCommand('workbench.action.openSettings', 'kaggle.cliPath');
+          if (action === signInAction) {
+            vscode.commands.executeCommand('kaggle.signIn');
           }
         }
       } catch (e) {

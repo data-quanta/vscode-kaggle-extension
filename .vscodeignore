@@ -1,5 +1,11 @@
 node_modules/**
 !node_modules/js-yaml/**
+!node_modules/axios/**
+!node_modules/form-data/**
+!node_modules/combined-stream/**
+!node_modules/asynckit/**
+!node_modules/mime-types/**
+!node_modules/mime-db/**
 .vscode/**
 .vscode-test/**
 src/**

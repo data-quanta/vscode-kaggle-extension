@@ -1,107 +1,240 @@
-# Kaggle: Studio
+# 🚀 Kaggle Studio - VS Code Extension
 
-Develop locally, run on Kaggle compute. Push notebooks/scripts,## Troubleshooting
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white&label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/DataQuanta.vscode-kaggle-run?style=flat-square&logo=visual-studio-code&logoColor=white)](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run)
 
-### ❗ CLI Not Found / Command Not Recognized
-If you get errors like "kaggle: command not found" or "kaggle is not recognized":
+**Develop locally, run on Kaggle's compute infrastructure.** Push notebooks and scripts, configure GPU/TPU settings, attach datasets, and download outputs — all integrated into VS Code.
 
-1. **Install Kaggle CLI**: `pip install kaggle`
-2. **Check installation**: Run **Kaggle: Check CLI Status** command in VS Code
-3. **Configure path**: If installed but not found, set `kaggle.cliPath` in settings to the full path of the kaggle executable
-4. **Restart VS Code** after installation
+---
 
-### Other Issues
-- **"Not found" in My Notebooks**: We fallback to `kaggle kernels list --mine`. Ensure you're signed in.
-- **No outputs**: Ensure the run finished or increase timeouts (`kaggle.pollTimeoutSeconds`).
-- **Authentication**: You can set `KAGGLE_TOKEN_JSON` environment variable or use **Kaggle: Sign In** command. Use **Kaggle: Sign Out** to clear stored tokens.se CPU/GPU/TPU, attach datasets, and auto-download outputs — all from VS Code.
+## ✨ Features
 
-## ⚠️ Prerequisites
-**IMPORTANT**: This extension requires the Kaggle CLI to be installed on your system.
+### 🖥️ **Seamless Local Development**
+- Write and debug your notebooks/scripts locally in VS Code
+- One-click deployment to Kaggle's cloud infrastructure
+- No external dependencies - connects directly to Kaggle's API
 
-### 1. Install Kaggle CLI
+### ⚡ **Kaggle Compute Integration**
+- Configure GPU/TPU settings for your notebooks
+- Enable/disable internet access per run
+- Choose accelerator type (none/GPU/TPU) per project
+
+### 📊 **Dataset Management**
+- Browse popular Kaggle datasets in sidebar
+- Attach datasets to your projects
+- Download datasets to local folders
+
+### 🏆 **Competition Integration**
+- Submit directly to Kaggle competitions
+- Simple submission workflow with file selection
+
+### 🔄 **Workflow Automation**
+- Auto-download outputs when runs complete
+- Configurable run status polling
+- Basic run logging and history
+- Smart project initialization and linking
+
+---
+
+## 🚀 Quick Start
+
+### 1️⃣ **Install & Authenticate**
 ```bash
-pip install kaggle
+# Install the extension from VS Code Marketplace
+# Then get your Kaggle API token
 ```
-Or visit: https://github.com/Kaggle/kaggle-api#installation
 
-### 2. Verify Installation
-Run `kaggle --version` in your terminal to confirm it's installed, or use the command **Kaggle: Check CLI Status** in VS Code.
+1. Go to [Kaggle Account Settings](https://www.kaggle.com/account)
+2. Create a new API token (downloads `kaggle.json`)
+3. **Sign in** using one of these methods:
+   - Use **"Kaggle: Sign In"** command in VS Code (recommended)
+   - Set `KAGGLE_TOKEN_JSON` environment variable
 
-### 3. Get a Kaggle API Token
-- Go to your Kaggle account settings
-- Create a new API token (downloads `kaggle.json`)
-- Either set the `KAGGLE_TOKEN_JSON` environment variable or use **Kaggle: Sign In** in VS Code
-
-## Authentication
-- Preferred: set env var `KAGGLE_TOKEN_JSON` to your kaggle.json content (e.g., `{ "username": "...", "key": "..." }`).
-- Or use “Kaggle: Sign In” (prompts for username and key). Token is stored in VS Code Secret Storage.
-- “Kaggle: Sign Out” clears the stored token.
-
-## Quick start
-1) Sign In: open any Kaggle view (Runs / My Notebooks / Datasets) and use the three-dots menu → Kaggle: Sign In.
-2) Init: run “Kaggle: Init Project” to create `kaggle.yml` and `kernel-metadata.json`.
-3) Open a `.ipynb` and click the rocket “Run on Kaggle”.
-4) Outputs auto-download to `.kaggle-outputs` (configurable). You can also run “Kaggle: Download Outputs”.
-
-## Features
-- Notebook toolbar button: “Run on Kaggle” (respects `kaggle.yml` accelerator/internet; prompts only if missing)
-- Auto-poll and download outputs when run completes
-- My Notebooks view: list your kernels; click to download/open locally under `remote_notebooks/<user__slug>`
-- Datasets view: list datasets; right-click to Attach, Browse Files (preview/download a single file), or Download all
-- Runs view: shows recent run URLs (from `.kaggle-run.log`)
-
-## Key commands
-- **Kaggle: Check CLI Status** - Verify if Kaggle CLI is properly installed
-- Kaggle: Sign In / Sign Out
-- Kaggle: Init Project
-- Kaggle: Link to Existing Notebook
-- Run on Kaggle (toolbar/menus)
-- Kaggle: Download Outputs
-- Kaggle: Attach Dataset / Attach from tree
-- Kaggle: Browse Dataset Files / Download Dataset
-- Kaggle: Submit to Competition
-
-## Configuration
-- `kaggle.cliPath`: path to Kaggle CLI (default: `kaggle`)
-- `kaggle.defaultAccelerator`: `none` | `gpu` | `tpu` (default: `none`)
-- `kaggle.defaultInternet`: boolean (default: `false`)
-- `kaggle.outputsFolder`: outputs download folder (default: `.kaggle-outputs`)
-- `kaggle.autoDownloadOnComplete`: auto download outputs (default: `true`)
-- `kaggle.pollIntervalSeconds` / `kaggle.pollTimeoutSeconds`: output polling behavior
-
-## Project files
-- `kaggle.yml` — extension config (code_file, accelerator, internet, privacy, datasets, competitions, outputs)
-- `kernel-metadata.json` — Kaggle notebook metadata read by the CLI
-
-### Example `kaggle.yml`
+### 2️⃣ **Initialize Your Project**
+```bash
+# Run the command palette (Ctrl/Cmd + Shift + P)
+> Kaggle: Init Project
 ```
-project: my-project
-kernel_slug: yourname/my-awesome-kernel
+This creates:
+- `kaggle.yml` - Project configuration
+- `kernel-metadata.json` - Notebook metadata
+
+### 3️⃣ **Run on Kaggle**
+1. Open any `.ipynb` notebook
+2. Click the 🚀 **"Run on Kaggle"** button in the toolbar
+3. Choose your compute preferences (GPU/TPU, Internet)
+4. Your notebook gets pushed and executed on Kaggle
+
+### 4️⃣ **Get Your Results**
+- Outputs automatically download to `.kaggle-outputs/` when complete
+- Extension polls Kaggle periodically to check run status
+- View run URLs from the Runs panel
+
+---
+
+## 📋 Key Commands
+
+| Command | Description | Shortcut |
+|---------|-------------|----------|
+| **Kaggle: Sign In** | Authenticate with Kaggle | - |
+| **Kaggle: Init Project** | Set up project files | - |
+| **Run on Kaggle** | Deploy and run notebook | Toolbar button 🚀 |
+| **Kaggle: Download Outputs** | Get run results | - |
+| **Kaggle: Check API Status** | Verify connection | - |
+| **Kaggle: Attach Dataset** | Add dataset to project | Right-click in Datasets |
+| **Kaggle: Submit to Competition** | Submit competition entry | - |
+
+---
+
+## 🎯 Use Cases
+
+### 🧪 **Machine Learning Research**
+- Prototype locally with fast iteration
+- Scale up training on GPU/TPU infrastructure
+- Access to 50,000+ datasets instantly
+
+### 📈 **Data Science Projects** 
+- Explore datasets in familiar VS Code environment
+- Leverage Kaggle's compute for heavy processing
+- Share and collaborate through Kaggle notebooks
+
+### 🏆 **Kaggle Competitions**
+- Develop solutions locally with full IDE support
+- Test on powerful hardware without setup
+- Submit entries directly from VS Code
+
+### 🎓 **Learning & Education**
+- Access Kaggle's datasets for learning
+- Practice with cloud compute resources
+- Build projects using Kaggle's platform
+
+---
+
+## ⚙️ Configuration
+
+### Project Configuration (`kaggle.yml`)
+```yaml
+project: my-awesome-project
+kernel_slug: username/my-project
 code_file: notebook.ipynb
-accelerator: gpu
-internet: false
-privacy: private
-datasets: []
-competitions: []
+accelerator: gpu          # none | gpu | tpu
+internet: true           # Enable internet access
+privacy: private         # private | public
+datasets:
+  - username/dataset-name
+competitions:
+  - competition-name
 outputs:
   download_to: .kaggle-outputs/
 ```
 
-## Folders used by the extension
-- `.kaggle-outputs/` — run outputs (auto-downloaded)
-- `.kaggle-datasets/<user__dataset>/` — dataset downloads
-- `remote_notebooks/<user__slug>/` — notebooks pulled from My Notebooks
+### Extension Settings
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `kaggle.defaultAccelerator` | `none` | Default compute type |
+| `kaggle.defaultInternet` | `false` | Default internet access |
+| `kaggle.outputsFolder` | `.kaggle-outputs` | Output download location |
+| `kaggle.autoDownloadOnComplete` | `true` | Auto-download results |
+| `kaggle.pollIntervalSeconds` | `30` | Status check frequency |
 
-## Troubleshooting
-- “Not found” in My Notebooks: we fallback to `kaggle kernels list --mine`. Ensure you’re signed in.
-- CLI missing: set `kaggle.cliPath` to the full path of the CLI.
-- No outputs: ensure the run finished or increase timeouts (`kaggle.pollTimeoutSeconds`).
-- Auth: you can set `KAGGLE_TOKEN_JSON` or use Sign In (username/key prompt). Sign Out clears stored token.
+---
 
-## Development & testing
-- Build: `npm run compile`
-- Watch: `npm run watch`
-- Tests: `npm test` (integration tests via `@vscode/test-electron`; optional E2E require CLI + creds)
+## 📁 Project Structure
 
-## Security notes
-- API token is kept in VS Code Secret Storage. The extension never writes kaggle.json to disk.
+```
+your-project/
+├── notebook.ipynb              # Your main notebook
+├── kaggle.yml                  # Project configuration  
+├── kernel-metadata.json        # Kaggle metadata
+├── .kaggle-outputs/           # Downloaded results
+├── .kaggle-run.log            # Run history log
+├── .kaggle-datasets/          # Cached datasets
+└── remote_notebooks/          # Pulled notebooks
+```
+
+---
+
+## 🛡️ Security & Privacy
+
+- **Secure Storage**: API tokens stored in VS Code's secure secret storage
+- **No File Writes**: Extension never writes `kaggle.json` to disk
+- **Privacy Control**: Choose public or private for each notebook
+- **Local Development**: Code stays local until you explicitly push
+
+---
+
+## 🔧 Development & Contributing
+
+### Building from Source
+```bash
+git clone https://github.com/data-quanta/vscode-kaggle-extension
+cd vscode-kaggle-extension
+npm install
+npm run compile
+```
+
+### Running Tests
+```bash
+npm test
+```
+
+### Contributing
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+---
+
+## 📊 What's New
+
+### v1.1.0 - Direct API Integration
+- ✅ **No external dependencies** - Direct Kaggle API integration
+- ✅ **Faster execution** - No CLI subprocess overhead  
+- ✅ **Better error handling** - Clear, actionable error messages
+- ✅ **Improved reliability** - Robust API connection management
+
+---
+
+## 🆘 Support & Troubleshooting
+
+### Common Issues
+
+**🔐 Authentication Problems**
+```bash
+# Check API status
+> Kaggle: Check API Status
+
+# Re-authenticate  
+> Kaggle: Sign Out
+> Kaggle: Sign In
+```
+
+**📊 Missing Outputs**
+- Ensure run completed successfully
+- Check `kaggle.pollTimeoutSeconds` setting
+- Verify output folder permissions
+
+**🔗 Connection Issues**
+- Verify internet connection
+- Check Kaggle API status
+- Confirm API token is valid
+
+### Getting Help
+- 📖 [Documentation](https://github.com/data-quanta/vscode-kaggle-extension)
+- 🐛 [Report Issues](https://github.com/data-quanta/vscode-kaggle-extension/issues)
+- 💬 [Discussions](https://github.com/data-quanta/vscode-kaggle-extension/discussions)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**⭐ If you find this extension helpful, please consider giving it a star on [GitHub](https://github.com/data-quanta/vscode-kaggle-extension)!**
+
+[Install from Marketplace](https://marketplace.visualstudio.com/items?itemName=DataQuanta.vscode-kaggle-run) • [View Source](https://github.com/data-quanta/vscode-kaggle-extension) • [Report Issues](https://github.com/data-quanta/vscode-kaggle-extension/issues)
+
+</div>

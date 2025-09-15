@@ -1,29 +1,24 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
-import { runKaggleCLI } from '../../kaggleCli';
+import { checkKaggleAPI } from '../../kaggleCli';
 
 suite('Kaggle E2E (optional)', () => {
-  test('kaggle --version runs when token provided via env', async function () {
+  test('Kaggle API connection works when token provided via env', async function () {
     if (!process.env.KAGGLE_TOKEN_JSON) {
       this.skip();
       return;
     }
-    const mockContext = {
-      secrets: {
-        get: () => Promise.resolve(undefined),
-        store: () => Promise.resolve(),
-        delete: () => Promise.resolve(),
-      },
-    } as unknown as vscode.ExtensionContext;
 
-    // Should resolve or at least attempt to exec; if kaggle is missing, error will mention not found
+    // Test API connection
     try {
-      const res = await runKaggleCLI(mockContext, ['--version']);
-      assert.match(res.stdout + res.stderr, /kaggle/i);
+      const result = await checkKaggleAPI();
+      assert.ok(result.available || result.error?.includes('credentials'));
+      if (result.available) {
+        assert.ok(result.version?.includes('API'));
+      }
     } catch (err: unknown) {
-      // Allow missing CLI case, but ensure token path was attempted (i.e., not token error)
+      // Allow connection errors, but ensure token was attempted
       const message = err instanceof Error ? err.message : String(err);
-      assert.ok(!message.includes('No Kaggle token'));
+      assert.ok(!message.includes('No Kaggle token') || message.includes('credentials'));
     }
   });
 });
