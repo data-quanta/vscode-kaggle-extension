@@ -37,10 +37,7 @@
     ],
     "icon": "media/kaggle-icon-bright.png",
     "activationEvents": [
-        "onLanguage:jupyter-notebook",
-        "onNotebook:jupyter-notebook",
-        "workspaceContains:**/*.ipynb",
-        "workspaceContains:kaggle.yml"
+        "onStartupFinished"
     ],
     "main": "./out/extension.js",
     "contributes": {
