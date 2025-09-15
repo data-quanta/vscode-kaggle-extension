@@ -2,7 +2,7 @@
     "name": "vscode-kaggle-run",
     "displayName": "Kaggle Studio",
     "description": "Develop locally, run on Kaggle compute. Push notebooks/scripts, toggle GPU/TPU, fetch outputs.",
-    "version": "1.1.14",
+    "version": "1.1.15",
     "publisher": "DataQuanta",
     "author": "Amin Vakhshouri",
     "license": "MIT",
