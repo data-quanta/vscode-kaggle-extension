@@ -5,6 +5,102 @@ import { OUTPUT } from './utils';
 
 const SECRET_KEY = 'kaggle.api.token.json';
 
+// Auto-install Kaggle CLI if not available
+async function ensureKaggleCLI(): Promise<void> {
+  try {
+    // Check if kaggle CLI is already available
+    const testResult = await executeKaggleCLI(['--version']);
+    if (testResult.code === 0) {
+      OUTPUT.appendLine('Kaggle CLI is available');
+      return;
+    }
+  } catch {
+    // CLI not found, need to install
+  }
+
+  OUTPUT.appendLine('Kaggle CLI not found, attempting to install...');
+
+  // Show progress to user
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'Installing Kaggle CLI...',
+      cancellable: false,
+    },
+    async progress => {
+      progress.report({ increment: 0, message: 'Checking Python installation...' });
+
+      try {
+        // Try to install using pip
+        progress.report({ increment: 25, message: 'Installing via pip...' });
+        const pipResult = await executeCommand('pip', ['install', 'kaggle']);
+        if (pipResult.code === 0) {
+          progress.report({ increment: 100, message: 'Installation complete!' });
+          OUTPUT.appendLine('Successfully installed Kaggle CLI via pip');
+          vscode.window.showInformationMessage('Kaggle CLI installed successfully!');
+          return;
+        }
+      } catch {
+        // pip install failed
+      }
+
+      try {
+        // Try with pip3
+        progress.report({ increment: 50, message: 'Trying pip3...' });
+        const pip3Result = await executeCommand('pip3', ['install', 'kaggle']);
+        if (pip3Result.code === 0) {
+          progress.report({ increment: 100, message: 'Installation complete!' });
+          OUTPUT.appendLine('Successfully installed Kaggle CLI via pip3');
+          vscode.window.showInformationMessage('Kaggle CLI installed successfully!');
+          return;
+        }
+      } catch {
+        // pip3 install failed
+      }
+
+      // If all installation attempts failed
+      const message =
+        'Kaggle CLI installation failed. Please install Python and run: pip install kaggle';
+      OUTPUT.appendLine(message);
+      vscode.window.showErrorMessage(
+        'Failed to install Kaggle CLI. Please install Python and run: pip install kaggle'
+      );
+      throw new Error(message);
+    }
+  );
+}
+
+// Generic command executor for system commands
+async function executeCommand(command: string, args: string[]): Promise<ExecResult> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { spawn } = require('child_process');
+
+  return new Promise(resolve => {
+    const childProcess = spawn(command, args, {
+      shell: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    childProcess.stdout?.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    childProcess.stderr?.on('data', (data: Buffer) => {
+      stderr += data.toString();
+    });
+
+    childProcess.on('close', (code: number) => {
+      resolve({ code, stdout, stderr });
+    });
+
+    childProcess.on('error', () => {
+      resolve({ code: 1, stdout, stderr: stderr || 'Command execution failed' });
+    });
+  });
+}
+
 export async function storeApiTokenFromFile(context: vscode.ExtensionContext) {
   const uri = await vscode.window.showOpenDialog({
     canSelectMany: false,
@@ -207,53 +303,38 @@ async function setupKaggleEnvironment(context: vscode.ExtensionContext): Promise
 
 export async function listMyKernels(context: vscode.ExtensionContext): Promise<any[]> {
   try {
-    // First try CLI approach
-    try {
-      await setupKaggleEnvironment(context);
-      OUTPUT.appendLine('Fetching your notebooks from Kaggle CLI...');
-      const result = await executeKaggleCLI([
-        'kernels',
-        'list',
-        '--mine',
-        '--csv',
-        '--page-size',
-        '100',
-      ]);
+    // Ensure Kaggle CLI is available first
+    await ensureKaggleCLI();
 
-      if (result.code === 0) {
-        // Parse CSV output
-        const lines = result.stdout.trim().split('\n');
-        if (lines.length <= 1) {
-          OUTPUT.appendLine('Found 0 notebooks');
-          return [];
-        }
+    // Use CLI approach for better reliability
+    await setupKaggleEnvironment(context);
+    OUTPUT.appendLine('Fetching notebooks from Kaggle CLI...');
+    const result = await executeKaggleCLI(['kernels', 'list', '--mine', '--page-size', '100']);
 
-        const headers = lines[0].split(',');
-        const kernels = lines.slice(1).map(line => {
-          const values = line.split(',');
-          const kernel: any = {};
-          headers.forEach((header, index) => {
-            kernel[header.toLowerCase()] = values[index] || '';
-          });
-          return kernel;
-        });
-
-        OUTPUT.appendLine(`Found ${kernels.length} notebooks`);
-        return kernels;
+    if (result.code === 0) {
+      // Parse CLI output - assuming CSV format
+      const lines = result.stdout.trim().split('\n');
+      if (lines.length <= 1) {
+        OUTPUT.appendLine('Found 0 notebooks');
+        return [];
       }
-    } catch (cliError) {
-      OUTPUT.appendLine(`CLI approach failed: ${cliError}`);
+
+      // Simple parsing for CLI output
+      const kernels = lines.slice(1).map(line => {
+        const parts = line.split(',');
+        return {
+          id: parts[0] || '',
+          title: parts[1] || '',
+          author: parts[2] || '',
+          url: `https://www.kaggle.com/code/${parts[0]}`,
+        };
+      });
+
+      OUTPUT.appendLine(`Found ${kernels.length} notebooks`);
+      return kernels;
+    } else {
+      throw new Error(`Kaggle CLI error: ${result.stderr}`);
     }
-
-    // Fallback to API approach
-    OUTPUT.appendLine('Falling back to Kaggle API...');
-    const credentials = await getKaggleCreds(context);
-    const client = getKaggleApiClient();
-    await client.setCredentials(credentials);
-
-    const kernels = await client.listMyKernels(1, 100);
-    OUTPUT.appendLine(`Found ${kernels.length} notebooks via API`);
-    return kernels;
   } catch (error) {
     OUTPUT.appendLine(`Error: ${error}`);
     throw error;
