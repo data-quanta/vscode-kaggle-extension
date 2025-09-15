@@ -36,7 +36,12 @@
         "Other"
     ],
     "icon": "media/kaggle-icon-bright.png",
-    "activationEvents": [],
+    "activationEvents": [
+        "onLanguage:jupyter-notebook",
+        "onNotebook:jupyter-notebook",
+        "workspaceContains:**/*.ipynb",
+        "workspaceContains:kaggle.yml"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
