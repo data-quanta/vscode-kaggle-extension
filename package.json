@@ -36,6 +36,9 @@
         "Other"
     ],
     "icon": "media/kaggle-icon-bright.png",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
