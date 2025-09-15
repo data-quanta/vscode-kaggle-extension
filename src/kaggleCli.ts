@@ -104,16 +104,35 @@ export async function checkKaggleAPI(): Promise<{
 }> {
   try {
     // First check if kaggle CLI is available
-    const result = await executeKaggleCLI(['--version']);
+    try {
+      const result = await executeKaggleCLI(['--version']);
+      if (result.code === 0) {
+        const credentials = await getKaggleCredentials();
+        if (!credentials) {
+          return {
+            available: false,
+            error:
+              'No Kaggle credentials found. Please use "Kaggle: Sign In" or set KAGGLE_TOKEN_JSON environment variable.',
+          };
+        }
 
-    if (result.code !== 0) {
-      return {
-        available: false,
-        error:
-          'Kaggle CLI is not installed or not available in PATH. Please install with: pip install kaggle',
-      };
+        // Test CLI with credentials
+        process.env.KAGGLE_USERNAME = credentials.username;
+        process.env.KAGGLE_KEY = credentials.key;
+
+        const testResult = await executeKaggleCLI(['competitions', 'list', '--page-size', '1']);
+        if (testResult.code === 0) {
+          return {
+            available: true,
+            version: `Kaggle CLI ${result.stdout.trim()}`,
+          };
+        }
+      }
+    } catch {
+      // CLI not available, try API fallback
     }
 
+    // Fallback to API approach
     const credentials = await getKaggleCredentials();
     if (!credentials) {
       return {
@@ -123,27 +142,25 @@ export async function checkKaggleAPI(): Promise<{
       };
     }
 
-    // Test CLI with credentials
-    process.env.KAGGLE_USERNAME = credentials.username;
-    process.env.KAGGLE_KEY = credentials.key;
+    const client = getKaggleApiClient();
+    await client.setCredentials(credentials);
+    const isAuthenticated = await client.testAuthentication();
 
-    const testResult = await executeKaggleCLI(['competitions', 'list', '--page-size', '1']);
-
-    if (testResult.code !== 0) {
+    if (isAuthenticated) {
+      return {
+        available: true,
+        version: 'Kaggle API (Direct)',
+      };
+    } else {
       return {
         available: false,
-        error: `Invalid Kaggle credentials or API error: ${testResult.stderr}`,
+        error: 'Invalid Kaggle credentials. Please check your username and API key.',
       };
     }
-
-    return {
-      available: true,
-      version: `Kaggle CLI ${result.stdout.trim()}`,
-    };
   } catch (error) {
     return {
       available: false,
-      error: `Error checking Kaggle CLI: ${error}`,
+      error: `Error connecting to Kaggle: ${error}`,
     };
   }
 }
@@ -190,47 +207,52 @@ async function setupKaggleEnvironment(context: vscode.ExtensionContext): Promise
 
 export async function listMyKernels(context: vscode.ExtensionContext): Promise<any[]> {
   try {
-    // Set up environment for CLI
-    await setupKaggleEnvironment(context);
+    // First try CLI approach
+    try {
+      await setupKaggleEnvironment(context);
+      OUTPUT.appendLine('Fetching your notebooks from Kaggle CLI...');
+      const result = await executeKaggleCLI([
+        'kernels',
+        'list',
+        '--mine',
+        '--csv',
+        '--page-size',
+        '100',
+      ]);
 
-    OUTPUT.appendLine('Fetching your notebooks from Kaggle ...');
-    const result = await executeKaggleCLI([
-      'kernels',
-      'list',
-      '--mine',
-      '--csv',
-      '--page-size',
-      '100',
-    ]);
+      if (result.code === 0) {
+        // Parse CSV output
+        const lines = result.stdout.trim().split('\n');
+        if (lines.length <= 1) {
+          OUTPUT.appendLine('Found 0 notebooks');
+          return [];
+        }
 
-    if (result.code !== 0) {
-      const errorMsg = result.stderr || result.stdout;
-      if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
-        throw new Error(
-          'Kaggle authentication failed. Please use "Kaggle: Sign In" command or check your credentials.'
-        );
+        const headers = lines[0].split(',');
+        const kernels = lines.slice(1).map(line => {
+          const values = line.split(',');
+          const kernel: any = {};
+          headers.forEach((header, index) => {
+            kernel[header.toLowerCase()] = values[index] || '';
+          });
+          return kernel;
+        });
+
+        OUTPUT.appendLine(`Found ${kernels.length} notebooks`);
+        return kernels;
       }
-      throw new Error(`Kaggle CLI error: ${errorMsg}`);
+    } catch (cliError) {
+      OUTPUT.appendLine(`CLI approach failed: ${cliError}`);
     }
 
-    // Parse CSV output
-    const lines = result.stdout.trim().split('\n');
-    if (lines.length <= 1) {
-      OUTPUT.appendLine('Found 0 notebooks');
-      return [];
-    }
+    // Fallback to API approach
+    OUTPUT.appendLine('Falling back to Kaggle API...');
+    const credentials = await getKaggleCreds(context);
+    const client = getKaggleApiClient();
+    await client.setCredentials(credentials);
 
-    const headers = lines[0].split(',');
-    const kernels = lines.slice(1).map(line => {
-      const values = line.split(',');
-      const kernel: any = {};
-      headers.forEach((header, index) => {
-        kernel[header.toLowerCase()] = values[index] || '';
-      });
-      return kernel;
-    });
-
-    OUTPUT.appendLine(`Found ${kernels.length} notebooks`);
+    const kernels = await client.listMyKernels(1, 100);
+    OUTPUT.appendLine(`Found ${kernels.length} notebooks via API`);
     return kernels;
   } catch (error) {
     OUTPUT.appendLine(`Error: ${error}`);
@@ -325,45 +347,50 @@ export async function listDatasets(
   search?: string
 ): Promise<any[]> {
   try {
-    // Set up environment for CLI
-    await setupKaggleEnvironment(context);
-
-    OUTPUT.appendLine('Fetching datasets from Kaggle ...');
-    const args = ['datasets', 'list', '--csv'];
-    if (search) {
-      args.push('--search', search);
-    }
-
-    const result = await executeKaggleCLI(args);
-
-    if (result.code !== 0) {
-      const errorMsg = result.stderr || result.stdout;
-      if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
-        throw new Error(
-          'Kaggle authentication failed. Please use "Kaggle: Sign In" command or check your credentials.'
-        );
+    // First try CLI approach
+    try {
+      await setupKaggleEnvironment(context);
+      OUTPUT.appendLine('Fetching datasets from Kaggle CLI...');
+      const args = ['datasets', 'list', '--csv'];
+      if (search) {
+        args.push('--search', search);
       }
-      throw new Error(`Kaggle CLI error: ${errorMsg}`);
+
+      const result = await executeKaggleCLI(args);
+
+      if (result.code === 0) {
+        // Parse CSV output
+        const lines = result.stdout.trim().split('\n');
+        if (lines.length <= 1) {
+          OUTPUT.appendLine('Found 0 datasets');
+          return [];
+        }
+
+        const headers = lines[0].split(',');
+        const datasets = lines.slice(1).map(line => {
+          const values = line.split(',');
+          const dataset: any = {};
+          headers.forEach((header, index) => {
+            dataset[header.toLowerCase()] = values[index] || '';
+          });
+          return dataset;
+        });
+
+        OUTPUT.appendLine(`Found ${datasets.length} datasets`);
+        return datasets;
+      }
+    } catch (cliError) {
+      OUTPUT.appendLine(`CLI approach failed: ${cliError}`);
     }
 
-    // Parse CSV output
-    const lines = result.stdout.trim().split('\n');
-    if (lines.length <= 1) {
-      OUTPUT.appendLine('Found 0 datasets');
-      return [];
-    }
+    // Fallback to API approach
+    OUTPUT.appendLine('Falling back to Kaggle API...');
+    const credentials = await getKaggleCreds(context);
+    const client = getKaggleApiClient();
+    await client.setCredentials(credentials);
 
-    const headers = lines[0].split(',');
-    const datasets = lines.slice(1).map(line => {
-      const values = line.split(',');
-      const dataset: any = {};
-      headers.forEach((header, index) => {
-        dataset[header.toLowerCase()] = values[index] || '';
-      });
-      return dataset;
-    });
-
-    OUTPUT.appendLine(`Found ${datasets.length} datasets`);
+    const datasets = await client.listDatasets(search);
+    OUTPUT.appendLine(`Found ${datasets.length} datasets via API`);
     return datasets;
   } catch (error) {
     OUTPUT.appendLine(`Error: ${error}`);
