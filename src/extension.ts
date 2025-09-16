@@ -2,7 +2,15 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import { OUTPUT, getWorkspaceFolder, ensureFolder, writeFile, readJson, showError } from './utils';
+import {
+  OUTPUT,
+  getWorkspaceFolder,
+  ensureFolder,
+  writeFile,
+  readJson,
+  showError,
+  showCompetitionError,
+} from './utils';
 import {
   runKaggleCLI,
   getKaggleCreds,
@@ -14,6 +22,7 @@ import { initProject } from './scaffold';
 import { RunsProvider } from './tree/runsProvider';
 import { MyNotebooksProvider } from './tree/myNotebooksProvider';
 import { DatasetsProvider } from './tree/datasetsProvider';
+import { CompetitionsProvider } from './tree/competitionsProvider';
 
 interface KaggleYml {
   project: string;
@@ -69,6 +78,8 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.window.registerTreeDataProvider('kaggleMyNotebooksView', myNotebooksProvider);
   const datasetsProvider = new DatasetsProvider(context, getUsername);
   vscode.window.registerTreeDataProvider('kaggleDatasetsView', datasetsProvider);
+  const competitionsProvider = new CompetitionsProvider(context, getUsername);
+  vscode.window.registerTreeDataProvider('kaggleCompetitionsView', competitionsProvider);
 
   // Create status bar item for CLI status
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -116,6 +127,9 @@ export async function activate(context: vscode.ExtensionContext) {
       myNotebooksProvider.refresh()
     ),
     vscode.commands.registerCommand('kaggle.refreshDatasets', () => datasetsProvider.refresh()),
+    vscode.commands.registerCommand('kaggle.refreshCompetitions', () =>
+      competitionsProvider.refresh()
+    ),
     vscode.commands.registerCommand('kaggle.openOnKaggle', async (item: { url?: string }) => {
       if (item?.url) vscode.env.openExternal(vscode.Uri.parse(item.url));
     }),
@@ -196,7 +210,25 @@ export async function activate(context: vscode.ExtensionContext) {
         if (!root) return vscode.window.showErrorMessage('Open a folder first.');
         try {
           const ymlPath = path.join(root, 'kaggle.yml');
-          const yml = (yaml.load(await fs.promises.readFile(ymlPath, 'utf8')) || {}) as KaggleYml;
+          let yml: Partial<KaggleYml> = {};
+          if (
+            !(await fs.promises
+              .stat(ymlPath)
+              .then(() => true)
+              .catch(() => false))
+          ) {
+            const create = await vscode.window.showInformationMessage(
+              'kaggle.yml not found. Initialize Kaggle project?',
+              'Yes',
+              'No'
+            );
+            if (create === 'Yes') {
+              await initProject(root);
+            } else {
+              return;
+            }
+          }
+          yml = (yaml.load(await fs.promises.readFile(ymlPath, 'utf8')) || {}) as KaggleYml;
           yml.datasets = Array.from(new Set([...(yml.datasets || []), item.ref]));
           await writeFile(ymlPath, yaml.dump(yml));
           vscode.window.showInformationMessage(`Attached dataset: ${item.ref}`);
@@ -230,6 +262,24 @@ export async function activate(context: vscode.ExtensionContext) {
       async (item?: { ref?: string }) => {
         const root = getWorkspaceFolder();
         if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+        const ymlPath = path.join(root, 'kaggle.yml');
+        if (
+          !(await fs.promises
+            .stat(ymlPath)
+            .then(() => true)
+            .catch(() => false))
+        ) {
+          const create = await vscode.window.showInformationMessage(
+            'kaggle.yml not found. Initialize Kaggle project?',
+            'Yes',
+            'No'
+          );
+          if (create === 'Yes') {
+            await initProject(root);
+          } else {
+            return;
+          }
+        }
         const ref =
           item?.ref ||
           (await vscode.window.showInputBox({ prompt: 'Dataset ref (username/dataset)' })) ||
@@ -279,6 +329,68 @@ export async function activate(context: vscode.ExtensionContext) {
         }
       }
     ),
+    // New command: Search datasets by competition name and download
+    vscode.commands.registerCommand('kaggle.searchDatasetsByCompetition', async () => {
+      const root = getWorkspaceFolder();
+      if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+      const ymlPath = path.join(root, 'kaggle.yml');
+      if (
+        !(await fs.promises
+          .stat(ymlPath)
+          .then(() => true)
+          .catch(() => false))
+      ) {
+        const create = await vscode.window.showInformationMessage(
+          'kaggle.yml not found. Initialize Kaggle project?',
+          'Yes',
+          'No'
+        );
+        if (create === 'Yes') {
+          await initProject(root);
+        } else {
+          return;
+        }
+      }
+      const compName = await vscode.window.showInputBox({
+        prompt: 'Competition name (e.g., titanic)',
+      });
+      if (!compName) return;
+      try {
+        // List datasets for the competition
+        const res = await runKaggleCLI(
+          context,
+          ['competitions', 'list', '--search', compName, '--csv'],
+          root
+        );
+        const lines = res.stdout.trim().split(/\r?\n/);
+        const header = lines.shift() || '';
+        const headers = header.split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+        const refIdx = headers.indexOf('ref');
+        const nameIdx = headers.indexOf('title');
+        const entries = lines.filter(Boolean).map(line => {
+          const cols = line.split(',');
+          const ref = cols[refIdx] || '';
+          const name = cols[nameIdx] || ref;
+          return { label: name, description: ref, ref } as vscode.QuickPickItem & { ref: string };
+        });
+        const pick = await vscode.window.showQuickPick(entries, {
+          placeHolder: `Competitions matching "${compName}"`,
+        });
+        if (!pick) return;
+        // Download competition data
+        const dest = path.join(root, 'competitions', pick.ref.replace(/[\\/]/g, '__'));
+        await ensureFolder(dest);
+        await runKaggleCLI(
+          context,
+          ['competitions', 'download', '-c', pick.ref, '-p', dest, '--unzip'],
+          root
+        );
+        vscode.window.showInformationMessage(`Competition data downloaded to ${dest}`);
+        await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(dest));
+      } catch (e) {
+        showError(e);
+      }
+    }),
 
     vscode.commands.registerCommand(
       'kaggle.datasetDownloadAll',
@@ -555,6 +667,205 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Submission uploaded.');
       } catch (e) {
         showError(e);
+      }
+    }),
+
+    // Competition-specific commands
+    vscode.commands.registerCommand('kaggle.competitionDownloadData', async (item?: any) => {
+      const root = getWorkspaceFolder();
+      if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+
+      // Extract ref from various possible sources
+      let ref = '';
+      if (item?.ref) {
+        ref = item.ref;
+      } else if (item?.url && typeof item.url === 'string') {
+        // Extract competition name from URL like https://www.kaggle.com/competitions/arc-prize-2025
+        const urlMatch = item.url.match(/\/competitions\/([^/?]+)/);
+        ref = urlMatch ? urlMatch[1] : '';
+      } else if (typeof item === 'string') {
+        // Handle case where item itself is the ref
+        ref = item;
+      }
+
+      if (!ref) {
+        ref =
+          (await vscode.window.showInputBox({ prompt: 'Competition name (e.g., titanic)' })) || '';
+      }
+      if (!ref) return;
+      try {
+        const dest = path.join(root, 'competitions', ref.replace(/[\\/]/g, '__'));
+        await ensureFolder(dest);
+        await runKaggleCLI(context, ['competitions', 'download', ref, '-p', dest], root);
+        vscode.window.showInformationMessage(`Competition data downloaded to ${dest}`);
+        await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(dest));
+      } catch (e) {
+        showCompetitionError(e, ref, 'download data');
+      }
+    }),
+
+    vscode.commands.registerCommand('kaggle.competitionSubmitFromTree', async (item?: any) => {
+      const root = getWorkspaceFolder();
+      if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+
+      // Extract ref from various possible sources
+      let ref = '';
+      if (item?.ref) {
+        ref = item.ref;
+      } else if (item?.url && typeof item.url === 'string') {
+        // Extract competition name from URL like https://www.kaggle.com/competitions/arc-prize-2025
+        const urlMatch = item.url.match(/\/competitions\/([^/?]+)/);
+        ref = urlMatch ? urlMatch[1] : '';
+      } else if (typeof item === 'string') {
+        // Handle case where item itself is the ref
+        ref = item;
+      }
+      if (!ref) return;
+      try {
+        const fileUri = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          openLabel: 'Select submission file',
+        });
+        if (!fileUri || !fileUri[0]) return;
+        const message =
+          (await vscode.window.showInputBox({
+            prompt: 'Submission message',
+            value: 'Submission from VS Code',
+          })) || 'Submission from VS Code';
+        await runKaggleCLI(
+          context,
+          ['competitions', 'submit', ref, '-f', fileUri[0].fsPath, '-m', message],
+          root
+        );
+        vscode.window.showInformationMessage(`Submission uploaded to ${ref}`);
+      } catch (e) {
+        showCompetitionError(e, ref, 'submit to');
+      }
+    }),
+
+    vscode.commands.registerCommand('kaggle.competitionViewSubmissions', async (item?: any) => {
+      const root = getWorkspaceFolder();
+      if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+
+      // Extract ref from various possible sources
+      let ref = '';
+      if (item?.ref) {
+        ref = item.ref;
+      } else if (item?.url && typeof item.url === 'string') {
+        // Extract competition name from URL like https://www.kaggle.com/competitions/arc-prize-2025
+        const urlMatch = item.url.match(/\/competitions\/([^/?]+)/);
+        ref = urlMatch ? urlMatch[1] : '';
+      } else if (typeof item === 'string') {
+        // Handle case where item itself is the ref
+        ref = item;
+      }
+
+      if (!ref) {
+        ref =
+          (await vscode.window.showInputBox({ prompt: 'Competition name (e.g., titanic)' })) || '';
+      }
+      if (!ref) return;
+      try {
+        const res = await runKaggleCLI(
+          context,
+          ['competitions', 'submissions', ref, '--csv'],
+          root
+        );
+        OUTPUT.show(true);
+        OUTPUT.appendLine(`=== Submissions for ${ref} ===`);
+        OUTPUT.appendLine(res.stdout);
+      } catch (e) {
+        showCompetitionError(e, ref, 'view submissions');
+      }
+    }),
+
+    vscode.commands.registerCommand(
+      'kaggle.competitionViewLeaderboard',
+      async (item?: { ref?: string }) => {
+        const root = getWorkspaceFolder();
+        if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+        const ref =
+          item?.ref ||
+          (await vscode.window.showInputBox({ prompt: 'Competition name (e.g., titanic)' })) ||
+          '';
+        if (!ref) return;
+        try {
+          const res = await runKaggleCLI(
+            context,
+            ['competitions', 'leaderboard', ref, '-s', '--csv'],
+            root
+          );
+          OUTPUT.show(true);
+          OUTPUT.appendLine(`=== Leaderboard for ${ref} ===`);
+          OUTPUT.appendLine(res.stdout);
+        } catch (e) {
+          showCompetitionError(e, ref, 'view leaderboard');
+        }
+      }
+    ),
+
+    vscode.commands.registerCommand('kaggle.competitionBrowseFiles', async (item?: any) => {
+      const root = getWorkspaceFolder();
+      if (!root) return vscode.window.showErrorMessage('Open a folder first.');
+
+      // Extract ref from various possible sources
+      let ref = '';
+      if (item?.ref) {
+        ref = item.ref;
+      } else if (item?.url && typeof item.url === 'string') {
+        // Extract competition name from URL like https://www.kaggle.com/competitions/arc-prize-2025
+        const urlMatch = item.url.match(/\/competitions\/([^/?]+)/);
+        ref = urlMatch ? urlMatch[1] : '';
+      } else if (typeof item === 'string') {
+        // Handle case where item itself is the ref
+        ref = item;
+      }
+
+      if (!ref) {
+        ref =
+          (await vscode.window.showInputBox({ prompt: 'Competition name (e.g., titanic)' })) || '';
+      }
+      if (!ref) return;
+      try {
+        const res = await runKaggleCLI(context, ['competitions', 'files', ref, '--csv'], root);
+        const lines = res.stdout.trim().split(/\r?\n/);
+        const header = lines.shift() || '';
+        const headers = header.split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+        const nameIdx = headers.indexOf('name');
+        const sizeIdx = headers.findIndex(h => /size|bytes/i.test(h));
+        const entries = lines.filter(Boolean).map(line => {
+          const cols = line.split(',');
+          const name = cols[nameIdx] || '';
+          const size = sizeIdx >= 0 ? cols[sizeIdx] : '';
+          return { label: name, description: size, name } as vscode.QuickPickItem & {
+            name: string;
+          };
+        });
+        const pick = await vscode.window.showQuickPick(entries, {
+          placeHolder: `Files in ${ref}`,
+        });
+        if (!pick) return;
+        const action = await vscode.window.showQuickPick(['Preview', 'Download'], {
+          placeHolder: `What do you want to do with ${pick.label}?`,
+        });
+        if (!action) return;
+        const dest = path.join(root, 'competitions', ref.replace(/[\\/]/g, '__'));
+        await ensureFolder(dest);
+        await runKaggleCLI(
+          context,
+          ['competitions', 'download', ref, '-f', pick.name, '-p', dest],
+          root
+        );
+        const filePath = path.join(dest, pick.name);
+        if (action === 'Preview') {
+          const doc = await vscode.workspace.openTextDocument(filePath);
+          await vscode.window.showTextDocument(doc, { preview: false });
+        } else {
+          vscode.window.showInformationMessage(`Downloaded to ${filePath}`);
+          await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(filePath));
+        }
+      } catch (e) {
+        showCompetitionError(e, ref, 'browse files');
       }
     }),
 

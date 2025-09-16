@@ -134,6 +134,55 @@
                 "command": "kaggle.checkCliStatus",
                 "title": "Kaggle: Check CLI Status",
                 "icon": "$(check)"
+            },
+            {
+                "command": "kaggle.searchDatasetsTree",
+                "title": "Kaggle: Search Datasets",
+                "icon": "$(search)"
+            },
+            {
+                "command": "kaggle.searchDatasetsByCompetition",
+                "title": "Kaggle: Search Datasets by Competition"
+            },
+            {
+                "command": "kaggle.searchNotebooksTree",
+                "title": "Kaggle: Search Notebooks",
+                "icon": "$(search)"
+            },
+            {
+                "command": "kaggle.refreshCompetitions",
+                "title": "Kaggle: Refresh Competitions",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "kaggle.searchCompetitionsTree",
+                "title": "Kaggle: Search Competitions",
+                "icon": "$(search)"
+            },
+            {
+                "command": "kaggle.competitionDownloadData",
+                "title": "Kaggle: Download Competition Data",
+                "icon": "$(cloud-download)"
+            },
+            {
+                "command": "kaggle.competitionSubmitFromTree",
+                "title": "Kaggle: Submit to Competition",
+                "icon": "$(cloud-upload)"
+            },
+            {
+                "command": "kaggle.competitionViewSubmissions",
+                "title": "Kaggle: View My Submissions",
+                "icon": "$(list-unordered)"
+            },
+            {
+                "command": "kaggle.competitionViewLeaderboard",
+                "title": "Kaggle: View Leaderboard",
+                "icon": "$(graph)"
+            },
+            {
+                "command": "kaggle.competitionBrowseFiles",
+                "title": "Kaggle: Browse Competition Files",
+                "icon": "$(file-directory)"
             }
         ],
         "viewsContainers": {
@@ -161,6 +210,11 @@
                     "id": "kaggleDatasetsView",
                     "name": "Datasets",
                     "icon": "$(database)"
+                },
+                {
+                    "id": "kaggleCompetitionsView",
+                    "name": "Competitions",
+                    "icon": "$(trophy)"
                 }
             ]
         },
@@ -228,6 +282,36 @@
                     "command": "kaggle.datasetDownloadAll",
                     "when": "view == kaggleDatasetsView && viewItem == dataset",
                     "group": "inline@4"
+                },
+                {
+                    "command": "kaggle.openOnKaggle",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "kaggle.competitionDownloadData",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "kaggle.competitionBrowseFiles",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@3"
+                },
+                {
+                    "command": "kaggle.competitionSubmitFromTree",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@4"
+                },
+                {
+                    "command": "kaggle.competitionViewSubmissions",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@5"
+                },
+                {
+                    "command": "kaggle.competitionViewLeaderboard",
+                    "when": "view == kaggleCompetitionsView && viewItem == competition",
+                    "group": "inline@6"
                 }
             ],
             "editor/title": [
@@ -245,9 +329,29 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "kaggle.searchNotebooksTree",
+                    "when": "view == kaggleMyNotebooksView",
+                    "group": "navigation@2"
+                },
+                {
                     "command": "kaggle.refreshDatasets",
                     "when": "view == kaggleDatasetsView",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "kaggle.searchDatasetsTree",
+                    "when": "view == kaggleDatasetsView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "kaggle.refreshCompetitions",
+                    "when": "view == kaggleCompetitionsView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "kaggle.searchCompetitionsTree",
+                    "when": "view == kaggleCompetitionsView",
+                    "group": "navigation@2"
                 },
                 {
                     "command": "kaggle.openOutputsFolder",
@@ -270,6 +374,11 @@
                     "group": "2_auth@1"
                 },
                 {
+                    "command": "kaggle.signIn",
+                    "when": "view == kaggleCompetitionsView && !kaggle.isSignedIn",
+                    "group": "2_auth@1"
+                },
+                {
                     "command": "kaggle.signOut",
                     "when": "view == kaggleRunsView && kaggle.isSignedIn",
                     "group": "2_auth@2"
@@ -282,6 +391,11 @@
                 {
                     "command": "kaggle.signOut",
                     "when": "view == kaggleDatasetsView && kaggle.isSignedIn",
+                    "group": "2_auth@2"
+                },
+                {
+                    "command": "kaggle.signOut",
+                    "when": "view == kaggleCompetitionsView && kaggle.isSignedIn",
                     "group": "2_auth@2"
                 }
             ]
@@ -300,6 +414,11 @@
             {
                 "view": "kaggleDatasetsView",
                 "contents": "Sign in to browse datasets. [Sign In](command:kaggle.signIn)",
+                "when": "!kaggle.isSignedIn"
+            },
+            {
+                "view": "kaggleCompetitionsView",
+                "contents": "Sign in to browse competitions. [Sign In](command:kaggle.signIn)",
                 "when": "!kaggle.isSignedIn"
             }
         ],

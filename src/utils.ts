@@ -43,3 +43,44 @@ export function showError(e: Error | unknown, msg?: string) {
   OUTPUT.appendLine(`Error: ${message}`);
   vscode.window.showErrorMessage(msg || message);
 }
+
+export function showCompetitionError(e: Error | unknown, competitionRef: string, action: string) {
+  const message = e instanceof Error ? e.message : String(e);
+  OUTPUT.appendLine(`Competition ${action} error: ${message}`);
+
+  if (message.includes('403') || message.includes('Forbidden')) {
+    const joinAction = 'Join Competition';
+    const learnAction = 'Learn More';
+    vscode.window
+      .showErrorMessage(
+        `Access denied for competition "${competitionRef}". You may need to join the competition first.`,
+        joinAction,
+        learnAction
+      )
+      .then(selection => {
+        if (selection === joinAction) {
+          vscode.env.openExternal(
+            vscode.Uri.parse(`https://www.kaggle.com/competitions/${competitionRef}`)
+          );
+        } else if (selection === learnAction) {
+          vscode.env.openExternal(vscode.Uri.parse('https://www.kaggle.com/docs/competitions'));
+        }
+      });
+  } else if (message.includes('401') || message.includes('Unauthorized')) {
+    const refreshAction = 'Refresh API Token';
+    vscode.window
+      .showErrorMessage(
+        `Authentication error for competition "${competitionRef}". Your API token may be invalid.`,
+        refreshAction
+      )
+      .then(selection => {
+        if (selection === refreshAction) {
+          vscode.env.openExternal(vscode.Uri.parse('https://www.kaggle.com/settings/account'));
+        }
+      });
+  } else {
+    vscode.window.showErrorMessage(
+      `Failed to ${action} for competition "${competitionRef}": ${message}`
+    );
+  }
+}
