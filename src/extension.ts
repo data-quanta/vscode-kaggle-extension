@@ -65,7 +65,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }, 2000); // Longer delay to ensure extension is fully activated first
   const runsProvider = new RunsProvider(context);
-  vscode.window.registerTreeDataProvider('kaggleRunsView', runsProvider);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('kaggleRunsView', runsProvider)
+  );
   const getUsername = async () => {
     try {
       const c = await getKaggleCreds(context);
@@ -75,11 +77,17 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
   const myNotebooksProvider = new MyNotebooksProvider(context, getUsername);
-  vscode.window.registerTreeDataProvider('kaggleMyNotebooksView', myNotebooksProvider);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('kaggleMyNotebooksView', myNotebooksProvider)
+  );
   const datasetsProvider = new DatasetsProvider(context, getUsername);
-  vscode.window.registerTreeDataProvider('kaggleDatasetsView', datasetsProvider);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('kaggleDatasetsView', datasetsProvider)
+  );
   const competitionsProvider = new CompetitionsProvider(context, getUsername);
-  vscode.window.registerTreeDataProvider('kaggleCompetitionsView', competitionsProvider);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider('kaggleCompetitionsView', competitionsProvider)
+  );
 
   // Create status bar item for CLI status
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
